@@ -1,15 +1,24 @@
 package com.example.auth_service.Mapper;
 
+import com.example.auth_service.Repository.GroupMemberRepository;
+import com.example.auth_service.Repository.GroupRepository;
 import com.example.auth_service.dto.CreateGroupRequest;
 import com.example.auth_service.dto.GroupResponse;
 import com.example.auth_service.entity.Group;
+import com.example.auth_service.entity.GroupMember;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class GroupMapper {
+
+    private final GroupMemberRepository groupMemberRepository;
 
     public GroupResponse toResponse(Group group) {
         if (group == null) return null;
+
+        int memberCount = groupMemberRepository.countByIdGroupId(group.getId());
 
         return new GroupResponse(
                 group.getId(),
@@ -17,7 +26,7 @@ public class GroupMapper {
                 group.getDescription(),
                 group.getOwnerId(),
                 group.getCreatedAt(),
-                group.getMembers() != null ? group.getMembers().size() : 0
+                memberCount
         );
     }
 
