@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -39,4 +40,38 @@ public class GroupController {
         GroupResponse group = groupService.getGroup(id);
         return ResponseEntity.ok(group);
     }
+
+    @PostMapping("/{groupId}/members/{userId}")
+    public ResponseEntity<?> addMember(
+            @PathVariable Long groupId,
+            @PathVariable String userId,
+            @RequestBody(required = false) Map<String, String> body,
+            @AuthenticationPrincipal Jwt jwt
+    ){
+        String role = body != null ? body.getOrDefault("role" , "MEMBER") : "MEMBER";
+        String adminUserId = jwt.getSubject();  // id of the admin
+
+        groupService.addMember(groupId,role, userId ,adminUserId );
+        //addMember(Long groupId, String role , String userToAdd , String adminUserId) {
+
+        return ResponseEntity.ok().build();
+    }
+
+
+    //removeMember(Long groupId, String userIdToRemove, String adminUserId)
+
+
+    @DeleteMapping("")
+    public ResponseEntity<?> removeMember(
+            @PathVariable Long groupId ,
+            @PathVariable String userId,
+            @AuthenticationPrincipal Jwt jwt
+            ) {
+        String adminUserId = jwt.getSubject();
+        groupService.removeMember(groupId,userId ,adminUserId );
+        return ResponseEntity.ok().build();
+    }
+
+
+
 }
