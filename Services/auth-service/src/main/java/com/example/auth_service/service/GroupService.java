@@ -109,10 +109,43 @@ public class GroupService {
         newMember.setRole(role);
         newMember.setGroup(group);
         groupMemberRepository.save(newMember);
+    }
+
+
+    @Transactional
+    public void removeMember(Long groupId, String userIdToRemove, String adminUserId) {
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(()-> new RuntimeException("group invalide"));
+
+        GroupMember adminMember = groupMemberRepository.findById(
+                new GroupMemberId(groupId, adminUserId)
+        ).orElseThrow(()-> new RuntimeException("You are already a member of this group"));
+
+        if(!adminMember.getRole().equals("ADMIN") &&
+                !adminMember.getRole().equals("OWNER")){
+            throw new RuntimeException("Only OWNER or ADMIN can remove members");
+        }
+
+        GroupMember memberToRemove = groupMemberRepository.findById(
+                new GroupMemberId(groupId , userIdToRemove)
+        ).orElseThrow(()-> new RuntimeException("User is not a member of this group"));
+
+
+        if(memberToRemove.getRole().equals("OWNER")
+        && !adminMember.getRole().equals("OWNER")){
+            throw new RuntimeException("Only OWNER or ADMIN can remove members");
+        }
+
+        if(userIdToRemove.equals(group.getOwnerId())){
+            int memberCount = groupMemberRepository.countByIdGroupId(groupId);
+            if(memberCount == 1){
+                throw new RuntimeException("OWNER can't leave as the only member of the group");
+            }
+        }
+        groupMemberRepository.delete(memberToRemove);
+    }
 
 
 
     }
-
-
-}
