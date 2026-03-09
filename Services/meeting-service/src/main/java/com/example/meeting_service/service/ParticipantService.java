@@ -28,7 +28,7 @@ public class ParticipantService {
 
     @Transactional
     @CacheEvict(value = "meetingDetails" , key = "#meetingId")
-    public void InviteParticpant (String userIdToInvite , Long meetingId, String organizerId ){
+    public void InviteParticpant (Long meetingId, String userIdToInvite ,  String organizerId ){
 
         log.info("Inviting user{} to meeting {} by organizer {}", userIdToInvite, meetingId, organizerId);
 
@@ -99,7 +99,7 @@ public class ParticipantService {
 
     @Transactional
     @CacheEvict(value = "meetingDetails" , key ="#meetingId")
-    public void acceptParticipant(Long meetingId , String userIdToAccept){
+    public void acceptInvitation(Long meetingId , String userIdToAccept){
         log.info("Accepting user {} from meeting {} ", userIdToAccept, meetingId);
 
         MeetingParticipant participant = participantRepository.findById(
