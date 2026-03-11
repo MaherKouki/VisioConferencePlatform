@@ -89,7 +89,7 @@ public class GroupService {
             throw new RuntimeException("User not found" +  userToAdd);
         }
 
-        boolean alreadyMember = groupMemberRepository.existsByIdGroupIdAndUserId(groupId, userToAdd);
+        boolean alreadyMember = groupMemberRepository.existsByIdGroupIdAndIdUserId(groupId, userToAdd);
 
 
         if(!alreadyMember){

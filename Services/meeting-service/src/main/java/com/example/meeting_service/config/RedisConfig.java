@@ -28,6 +28,8 @@ public class RedisConfig {
     public RedisTemplate<String,Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String,Object> template = new RedisTemplate<>();
 
+        template.setConnectionFactory(connectionFactory);
+
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
         template.setKeySerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
@@ -47,7 +49,7 @@ public class RedisConfig {
         template.setHashValueSerializer(jsonSerializer);
 
         template.afterPropertiesSet();
-        return   template;
+        return template;
     }
 
 
