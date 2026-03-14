@@ -65,48 +65,48 @@ public class GroupService {
     }
 
     @Transactional
-    public void addMember(Long groupId, String role , String userToAdd , String adminUserId) {
+    public void addMember(Long groupId, String role, String userToAdd, String adminUserId) {
 
         Group group = groupRepository.findById(groupId)
-                .orElseThrow(()-> new RuntimeException("groupe invalide"));
+                .orElseThrow(() -> new RuntimeException("Group not found"));
 
+        // Vérifier que celui qui ajoute est membre du groupe
         GroupMember adminMember = groupMemberRepository.findById(
                 new GroupMemberId(groupId, adminUserId)
-        ).orElseThrow(()-> new RuntimeException("You are already a member of this group"));
+        ).orElseThrow(() -> new RuntimeException("You are not a member of this group"));
 
-        if(!adminMember.getRole().equals("ADMIN") &&
-        !adminMember.getRole().equals("OWNER")){
+        // Vérifier que celui qui ajoute est OWNER ou ADMIN
+        String adminRole = adminMember.getRole().toUpperCase();
+        if (!adminRole.equals("OWNER") && !adminRole.equals("ADMIN")) {
             throw new RuntimeException("Only OWNER or ADMIN can add members");
         }
 
+        // Vérifier que l'user existe dans Keycloak
         try {
-            UserRepresentation user = keycloak.realm(realm)
-                    .users()
-                    .get(userToAdd)
-                    .toRepresentation();
-        }
-        catch (Exception e){
-            throw new RuntimeException("User not found" +  userToAdd);
+            keycloak.realm(realm).users().get(userToAdd).toRepresentation();
+        } catch (Exception e) {
+            throw new RuntimeException("User not found: " + userToAdd);
         }
 
-        boolean alreadyMember = groupMemberRepository.existsByIdGroupIdAndIdUserId(groupId, userToAdd);
-
-
-        if(!alreadyMember){
-            throw new RuntimeException("User" + userToAdd + " is already a member of the group" + groupId );
-        }
-
+        // BUG FIX 2 : normaliser le rôle EN PREMIER
         if (role == null || role.isEmpty()) {
             role = "MEMBER";
         }
 
-        if(role.equals("OWNER") && !adminMember.getRole().equals("OWNER")){
-            throw new RuntimeException("Only OWNER or ADMIN can add other OWNERS");
+        // BUG FIX 1 : condition corrigée
+        boolean alreadyMember = groupMemberRepository.existsByIdGroupIdAndIdUserId(groupId, userToAdd);
+        if (alreadyMember) {
+            throw new RuntimeException("User " + userToAdd + " is already a member of group " + groupId);
         }
 
-        GroupMember newMember = new GroupMember() ;
+        // Seul OWNER peut assigner le rôle OWNER
+        if (role.toUpperCase().equals("OWNER") && !adminRole.equals("OWNER")) {
+            throw new RuntimeException("Only OWNER can assign OWNER role");
+        }
+
+        GroupMember newMember = new GroupMember();
         newMember.setId(new GroupMemberId(groupId, userToAdd));
-        newMember.setRole(role);
+        newMember.setRole(role.toUpperCase()); // ✅ toujours en majuscules
         newMember.setGroup(group);
         groupMemberRepository.save(newMember);
     }
@@ -144,6 +144,13 @@ public class GroupService {
             }
         }
         groupMemberRepository.delete(memberToRemove);
+    }
+
+    public List<GroupMember> getGroupMembers(Long groupId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        return groupMemberRepository.findByIdGroupId(groupId);
     }
 
 

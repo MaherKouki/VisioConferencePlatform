@@ -10,17 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * ═══════════════════════════════════════════════════════════
- * PARTICIPANT CONTROLLER - Gestion Participants
- * ═══════════════════════════════════════════════════════════
- *
- * Endpoints :
- * - POST   /api/meetings/{meetingId}/participants/{userId}    → Inviter
- * - DELETE /api/meetings/{meetingId}/participants/{userId}    → Retirer
- * - PUT    /api/meetings/{meetingId}/participants/accept      → Accepter invitation
- * - PUT    /api/meetings/{meetingId}/participants/decline     → Refuser invitation
- */
+
 @RestController
 @RequestMapping("/api/meetings")
 @RequiredArgsConstructor
@@ -29,23 +19,7 @@ public class ParticipantController {
 
     private final ParticipantService participantService;
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * INVITER UN PARTICIPANT
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/meetings/{meetingId}/participants/{userId}
-     *
-     * Restrictions :
-     * - Seul l'organisateur peut inviter
-     * - Utilisateur doit exister (vérifié via Auth Service)
-     * - Réunion pas ENDED/CANCELLED
-     * - Limite max_participants respectée
-     *
-     * REDIS :
-     * - userCacheService.userExists() : Vérif cache
-     * - @CacheEvict : Invalide cache détails réunion
-     */
+
     @PostMapping("/{meetingId}/participants/{userId}")
     public ResponseEntity<Map<String, String>> inviteParticipant(
             @PathVariable Long meetingId,
@@ -65,16 +39,7 @@ public class ParticipantController {
         ));
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * RETIRER UN PARTICIPANT
-     * ═══════════════════════════════════════════════════════════
-     *
-     * DELETE /api/meetings/{meetingId}/participants/{userId}
-     *
-     * Restrictions :
-     * - Seul l'organisateur peut retirer
-     */
+
     @DeleteMapping("/{meetingId}/participants/{userId}")
     public ResponseEntity<Map<String, String>> removeParticipant(
             @PathVariable Long meetingId,
@@ -94,15 +59,7 @@ public class ParticipantController {
         ));
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * ACCEPTER UNE INVITATION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * PUT /api/meetings/{meetingId}/participants/accept
-     *
-     * Participant change son statut : INVITED → ACCEPTED
-     */
+
     @PutMapping("/{meetingId}/participants/accept")
     public ResponseEntity<Map<String, String>> acceptInvitation(
             @PathVariable Long meetingId,
@@ -120,15 +77,7 @@ public class ParticipantController {
         ));
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * REFUSER UNE INVITATION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * PUT /api/meetings/{meetingId}/participants/decline
-     *
-     * Participant change son statut : INVITED → DECLINED
-     */
+
     @PutMapping("/{meetingId}/participants/decline")
     public ResponseEntity<Map<String, String>> declineInvitation(
             @PathVariable Long meetingId,

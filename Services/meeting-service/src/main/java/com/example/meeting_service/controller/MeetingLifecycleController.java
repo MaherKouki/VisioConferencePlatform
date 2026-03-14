@@ -10,20 +10,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * ═══════════════════════════════════════════════════════════
- * MEETING LIFECYCLE CONTROLLER - Cycle de Vie Réunions
- * ═══════════════════════════════════════════════════════════
- *
- * Gestion des transitions d'état (PostgreSQL) :
- * SCHEDULED → LIVE → ENDED
- *
- * Endpoints :
- * - POST /api/meetings/{id}/start   → Démarrer réunion
- * - POST /api/meetings/{id}/join    → Rejoindre réunion
- * - POST /api/meetings/{id}/leave   → Quitter réunion
- * - POST /api/meetings/{id}/end     → Terminer réunion
- */
+
+///api/meetings/{id}/start
+///api/meetings/{id}/join
+///api/meetings/{id}/leave
+// /api/meetings/{id}/end
+
 @RestController
 @RequestMapping("/api/meetings")
 @RequiredArgsConstructor
@@ -32,32 +24,7 @@ public class MeetingLifecycleController {
 
     private final MeetingLifecycleService lifecycleService;
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * DÉMARRER UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/meetings/{id}/start
-     *
-     * Transition : SCHEDULED → LIVE
-     *
-     * Règles :
-     * - Seul l'organisateur peut démarrer
-     * - Tolérance ±15 minutes heure planifiée
-     *
-     * Actions :
-     * 1. PostgreSQL : status → LIVE, actualStartTime, meetingUrl
-     * 2. Redis : Marquer organisateur actif
-     * 3. Kafka : Publier MeetingStartedEvent
-     *
-     * Response :
-     * {
-     *   "message": "Meeting started successfully",
-     *   "meetingUrl": "https://meet.example.com/room/123/...",
-     *   "status": "LIVE",
-     *   "actualStartTime": "2026-03-10T14:02:30"
-     * }
-     */
+
     @PostMapping("/{id}/start")
     public ResponseEntity<Map<String, Object>> startMeeting(
             @PathVariable Long id,
@@ -72,31 +39,7 @@ public class MeetingLifecycleController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * REJOINDRE UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/meetings/{id}/join
-     *
-     * Règles :
-     * - Réunion doit être LIVE
-     * - Utilisateur invité ou organisateur
-     *
-     * Actions :
-     * 1. PostgreSQL : status participant → ATTENDED, joinedAt
-     * 2. Redis : Marquer participant actif
-     * 3. Frontend : Redirection vers meetingUrl
-     *
-     * Response :
-     * {
-     *   "meetingUrl": "https://meet.example.com/room/123/...",
-     *   "meetingId": 123,
-     *   "title": "Sprint Planning",
-     *   "isRecorded": true,
-     *   "activeParticipants": 5  ← Nombre en ligne (Redis)
-     * }
-     */
+
     @PostMapping("/{id}/join")
     public ResponseEntity<Map<String, Object>> joinMeeting(
             @PathVariable Long id,
@@ -111,18 +54,7 @@ public class MeetingLifecycleController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * QUITTER UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/meetings/{id}/leave
-     *
-     * Actions :
-     * 1. PostgreSQL : leftAt = NOW()
-     * 2. Redis : Retirer du Set actifs
-     * 3. Si dernier participant (Redis count = 0) → Auto-terminer
-     */
+
     @PostMapping("/{id}/leave")
     public ResponseEntity<Map<String, String>> leaveMeeting(
             @PathVariable Long id,
@@ -140,23 +72,7 @@ public class MeetingLifecycleController {
         ));
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * TERMINER UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/meetings/{id}/end
-     *
-     * Transition : LIVE → ENDED
-     *
-     * Règles :
-     * - Seul l'organisateur peut terminer
-     *
-     * Actions :
-     * 1. PostgreSQL : status → ENDED, actualEndTime
-     * 2. Redis : Nettoyer session (supprimer Set actifs)
-     * 3. Kafka : Publier MeetingEndedEvent
-     */
+
     @PostMapping("/{id}/end")
     public ResponseEntity<Map<String, String>> endMeeting(
             @PathVariable Long id,

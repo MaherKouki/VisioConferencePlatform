@@ -18,22 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * ═══════════════════════════════════════════════════════════
- * MEETING CONTROLLER - CRUD Réunions
- * ═══════════════════════════════════════════════════════════
- *
- * Endpoints :
- * - POST   /api/meetings                    → Créer réunion
- * - GET    /api/meetings                    → Mes réunions
- * - GET    /api/meetings?status=LIVE        → Mes réunions filtrées
- * - GET    /api/meetings/{id}               → Détails réunion
- * - PUT    /api/meetings/{id}               → Modifier réunion
- * - DELETE /api/meetings/{id}               → Annuler réunion
- *
- * Authentification : JWT Keycloak (Bearer Token)
- * User ID extrait de : jwt.getSubject()
- */
+
 @RestController
 @RequestMapping("/api/meetings")
 @RequiredArgsConstructor
@@ -42,34 +27,7 @@ public class MeetingController {
 
     private final MeetingService meetingService;
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * CRÉER UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/meetings
-     *
-     * Body :
-     * {
-     *   "title": "Sprint Planning Q2",
-     *   "description": "Planification sprint 12",
-     *   "groupId": 1,
-     *   "scheduledStartTime": "2026-03-10T14:00:00",
-     *   "scheduledEndTime": "2026-03-10T15:00:00",
-     *   "participantIds": ["bob-uuid", "charlie-uuid"],
-     *   "maxParticipants": 50,
-     *   "isRecorded": true
-     * }
-     *
-     * Response 201 :
-     * {
-     *   "id": 123,
-     *   "title": "Sprint Planning Q2",
-     *   "status": "SCHEDULED",
-     *   "participantCount": 5,
-     *   ...
-     * }
-     */
+
     @PostMapping
     public ResponseEntity<MeetingResponse> createMeeting(
             @Valid @RequestBody CreateMeetingRequest request,
@@ -84,22 +42,7 @@ public class MeetingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * LISTER MES RÉUNIONS
-     * ═══════════════════════════════════════════════════════════
-     *
-     * GET /api/meetings
-     * GET /api/meetings?status=LIVE
-     * GET /api/meetings?status=SCHEDULED
-     *
-     * Retourne TOUTES les réunions où je suis :
-     * - Organisateur
-     * - OU Participant
-     *
-     * Query Params :
-     * - status (optionnel) : SCHEDULED, LIVE, ENDED, CANCELLED
-     */
+
     @GetMapping
     public ResponseEntity<List<MeetingResponse>> getMyMeetings(
             @RequestParam(required = false) MeetingStatus status,
@@ -120,42 +63,7 @@ public class MeetingController {
         return ResponseEntity.ok(meetings);
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * DÉTAILS D'UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * GET /api/meetings/{id}
-     *
-     * Response 200 :
-     * {
-     *   "id": 123,
-     *   "title": "Sprint Planning Q2",
-     *   "organizer": {
-     *     "userId": "alice-uuid",
-     *     "username": "alice",
-     *     "email": "alice@example.com"
-     *   },
-     *   "group": {
-     *     "groupId": 1,
-     *     "groupName": "Équipe Dev"
-     *   },
-     *   "participants": [
-     *     {
-     *       "userId": "bob-uuid",
-     *       "username": "bob",
-     *       "status": "ACCEPTED",
-     *       "joinedAt": "2026-03-10T14:05:00"
-     *     }
-     *   ],
-     *   "meetingUrl": "https://meet.example.com/room/123/...",
-     *   ...
-     * }
-     *
-     * CACHE REDIS :
-     * - 1er appel : Query DB + Appels Auth Service
-     * - Appels suivants (< 15 min) : Lecture Redis (< 10ms)
-     */
+
     @GetMapping("/{id}")
     public ResponseEntity<MeetingDetailResponse> getMeetingDetails(
             @PathVariable Long id,
@@ -170,29 +78,7 @@ public class MeetingController {
         return ResponseEntity.ok(details);
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * MODIFIER UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * PUT /api/meetings/{id}
-     *
-     * Body (tous champs optionnels) :
-     * {
-     *   "title": "Sprint Planning Q2 - UPDATED",
-     *   "description": "Nouvelle description",
-     *   "scheduledStartTime": "2026-03-10T15:00:00",
-     *   "maxParticipants": 100,
-     *   "isRecorded": false
-     * }
-     *
-     * Restrictions :
-     * - Seul l'organisateur peut modifier
-     * - Impossible si ENDED ou CANCELLED
-     *
-     * REDIS :
-     * - @CacheEvict : Invalide cache getMeetingDetails()
-     */
+
     @PutMapping("/{id}")
     public ResponseEntity<MeetingResponse> updateMeeting(
             @PathVariable Long id,
@@ -208,21 +94,7 @@ public class MeetingController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * ANNULER UNE RÉUNION
-     * ═══════════════════════════════════════════════════════════
-     *
-     * DELETE /api/meetings/{id}
-     *
-     * Restrictions :
-     * - Seul l'organisateur peut annuler
-     * - Change status → CANCELLED
-     *
-     * REDIS :
-     * - Nettoie session si réunion était LIVE
-     * - Invalide cache
-     */
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> cancelMeeting(
             @PathVariable Long id,

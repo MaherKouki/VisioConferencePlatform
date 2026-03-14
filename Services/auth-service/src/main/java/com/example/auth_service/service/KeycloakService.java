@@ -45,10 +45,6 @@ public class KeycloakService {
     private String adminClientSecret;
 
 
-    // ──────────────────────────────────────────────────────────────
-    // LOGIN
-    // ──────────────────────────────────────────────────────────────
-
     public Map<String, Object> login(String username, String password) {
         String tokenUrl = authServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
@@ -67,12 +63,8 @@ public class KeycloakService {
     }
 
 
-    // ──────────────────────────────────────────────────────────────
-    // CRÉER UTILISATEUR
-    // ──────────────────────────────────────────────────────────────
-
     public void createUser(RegisterRequest request) {
-        // ✅ FIX : utilise getKeycloakInstance() au lieu de redéclarer localement
+        // Utilise getKeycloakInstance() au lieu de redéclarer localement
         Keycloak adminClient = getKeycloakInstance();
 
         try {
@@ -113,7 +105,7 @@ public class KeycloakService {
                 log.info("✅ User created in Keycloak: {}", request.getUsername());
 
             } finally {
-                // ✅ FIX : response.close() dans un finally pour éviter les fuites
+                // response.close() dans un finally pour éviter les fuites
                 response.close();
             }
 
@@ -123,10 +115,6 @@ public class KeycloakService {
         }
     }
 
-
-    // ──────────────────────────────────────────────────────────────
-    // RESET MOT DE PASSE
-    // ──────────────────────────────────────────────────────────────
 
     public void sendPasswordResetEmail(String email) {
         // ✅ FIX : utilise getKeycloakInstance() au lieu de redéclarer localement
@@ -156,9 +144,6 @@ public class KeycloakService {
     }
 
 
-    // ──────────────────────────────────────────────────────────────
-    // RECHERCHER UTILISATEURS
-    // ──────────────────────────────────────────────────────────────
 
     public List<UserInfo> searchUsers(String query) {
         Keycloak adminClient = getKeycloakInstance();
@@ -178,9 +163,6 @@ public class KeycloakService {
     }
 
 
-    // ──────────────────────────────────────────────────────────────
-    // RÉCUPÉRER UTILISATEUR PAR ID
-    // ──────────────────────────────────────────────────────────────
 
     public UserInfo getUserById(String userId) {
         Keycloak adminClient = getKeycloakInstance();
@@ -199,10 +181,6 @@ public class KeycloakService {
     }
 
 
-    // ──────────────────────────────────────────────────────────────
-    // HELPERS PRIVÉS
-    // ──────────────────────────────────────────────────────────────
-
     private UserInfo mapToUserInfo(UserRepresentation keycloakUser) {
         List<String> roles = new ArrayList<>();
         if (keycloakUser.getRealmRoles() != null) {
@@ -220,10 +198,7 @@ public class KeycloakService {
                 .build();
     }
 
-    /**
-     * ✅ Source unique pour créer une instance Keycloak admin
-     * Toutes les méthodes passent par ici — plus de duplication
-     */
+
     private Keycloak getKeycloakInstance() {
         return KeycloakBuilder.builder()
                 .serverUrl(authServerUrl)
@@ -233,4 +208,23 @@ public class KeycloakService {
                 .grantType("client_credentials")
                 .build();
     }
+
+
+    public List<UserInfo> getAllUsers() {
+        Keycloak adminClient = getKeycloakInstance();
+
+        try {
+            return adminClient.realm(realm)
+                    .users()
+                    .list()
+                    .stream()
+                    .map(this::mapToUserInfo)
+                    .collect(Collectors.toList());
+        } finally {
+            adminClient.close();
+        }
+    }
+
+
+
 }

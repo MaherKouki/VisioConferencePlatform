@@ -41,8 +41,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8180/realms/visioconference-realm
-          jwk-set-uri: http://localhost:8180/realms/visioconference-realm/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8180/realms/visioconference
+          jwk-set-uri: http://localhost:8180/realms/visioconference/protocol/openid-connect/certs
 
 # Auth Service URL
 auth-service:

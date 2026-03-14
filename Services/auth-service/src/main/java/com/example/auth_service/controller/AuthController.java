@@ -44,6 +44,30 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<UserInfo> getUserById(
+            @PathVariable String userId,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            UserInfo user = keycloakService.getUserById(userId);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserInfo>> getAllUsers() {
+        try {
+            List<UserInfo> users = keycloakService.searchUsers("");
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            log.error("Error fetching users", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 
 
 
@@ -98,13 +122,7 @@ public class AuthController {
     }
 
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * INSCRIPTION NOUVEL UTILISATEUR
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/auth/register
-     */
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
@@ -123,13 +141,6 @@ public class AuthController {
     }
 
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * DEMANDE RÉINITIALISATION MOT DE PASSE
-     * ═══════════════════════════════════════════════════════════
-     *
-     * POST /api/auth/forgot-password
-     */
 
 
     @PostMapping("/forgot-password")

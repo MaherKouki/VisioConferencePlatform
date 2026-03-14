@@ -2,8 +2,10 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.CreateGroupRequest;
 import com.example.auth_service.dto.GroupResponse;
+import com.example.auth_service.entity.GroupMember;
 import com.example.auth_service.service.GroupService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -61,7 +63,7 @@ public class GroupController {
     //removeMember(Long groupId, String userIdToRemove, String adminUserId)
 
 
-    @DeleteMapping("")
+    @DeleteMapping("/{groupId}/members/{userId}")
     public ResponseEntity<?> removeMember(
             @PathVariable Long groupId ,
             @PathVariable String userId,
@@ -70,6 +72,20 @@ public class GroupController {
         String adminUserId = jwt.getSubject();
         groupService.removeMember(groupId,userId ,adminUserId );
         return ResponseEntity.ok().build();
+    }
+
+
+    @GetMapping("/{groupId}/members")
+    public ResponseEntity<?> getGroupMembers(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            List<GroupMember> members = groupService.getGroupMembers(groupId);
+            return ResponseEntity.ok(members);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
 

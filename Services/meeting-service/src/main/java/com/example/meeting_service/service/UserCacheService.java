@@ -16,30 +16,30 @@ import org.springframework.stereotype.Service;
 public class UserCacheService {
     private final AuthServiceClient authServiceClient;
 
-    @Cacheable(value = "userInfo" , key = "#userId")
-    public UserInfo getUserInfo(String userId) {
 
-        log.debug("Cache for user {} , fetching from auth Service", userId);
+
+    // unless="#result == null"
+    @Cacheable(value = "userInfo", key = "#userId", unless = "#result == null")
+    public UserInfo getUserInfo(String userId) {
+        log.debug("user {}, fetching from auth Service", userId);
 
         UserInfo userInfo = authServiceClient.getUserInfo(userId);
 
         if (userInfo != null) {
-            log.info("User {} cached for 15 minutes", userId);
-        }
-        else {
+            log.info("User {} fetched and will be cached for 15 minutes", userId);
+        } else {
             log.warn("User {} not found in auth Service", userId);
         }
 
         return userInfo;
     }
 
-
-    @Cacheable(value = "userExists" , key = "#userId")
+    @Cacheable(value = "userExists", key = "#userId", unless = "#result == false")
     public boolean userExists(String userId) {
-        log.debug("Cache for user {} , fetching from auth Service", userId);
-        boolean exits = authServiceClient.userExists(userId);
-        log.info("User {} exists , chached : {}", userId ,  exits);
-        return exits;
+        log.debug("Cache MISS for user {}, fetching from auth Service", userId);
+        boolean exists = authServiceClient.userExists(userId);
+        log.info("User {} exists: {}", userId, exists);
+        return exists;
     }
 
 
