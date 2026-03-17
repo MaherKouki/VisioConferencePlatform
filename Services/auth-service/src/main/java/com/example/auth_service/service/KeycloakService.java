@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class KeycloakService {
 
-    // ✅ Bean injecté par Spring - NE PAS redéclarer localement dans les méthodes
     private final Keycloak keycloak;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -44,7 +43,9 @@ public class KeycloakService {
     @Value("${keycloak.credentials.secret}")
     private String adminClientSecret;
 
-
+    // ══════════════════════════════════════════════════════════════
+    // LOGIN
+    // ══════════════════════════════════════════════════════════════
     public Map<String, Object> login(String username, String password) {
         String tokenUrl = authServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
@@ -62,15 +63,17 @@ public class KeycloakService {
         return response.getBody();
     }
 
-
+    // ══════════════════════════════════════════════════════════════
+    // REGISTER
+    // ══════════════════════════════════════════════════════════════
     public void createUser(RegisterRequest request) {
-        // Utilise getKeycloakInstance() au lieu de redéclarer localement
         Keycloak adminClient = getKeycloakInstance();
 
         try {
             RealmResource realmResource = adminClient.realm(realm);
             UsersResource usersResource = realmResource.users();
 
+            // ── 1. Créer l'utilisateur ────────────────────────────
             UserRepresentation user = new UserRepresentation();
             user.setUsername(request.getUsername());
             user.setEmail(request.getEmail());
@@ -89,8 +92,13 @@ public class KeycloakService {
                     throw new RuntimeException("Failed to create user in Keycloak. Status: " + response.getStatus());
                 }
 
-                String userId = response.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
+                // ── 2. Récupérer l'ID du nouvel utilisateur ───────
+                String userId = response.getLocation().getPath()
+                        .replaceAll(".*/([^/]+)$", "$1");
 
+                log.info("✅ User created in Keycloak with ID: {}", userId);
+
+                // ── 3. Définir le mot de passe ────────────────────
                 CredentialRepresentation credential = new CredentialRepresentation();
                 credential.setType(CredentialRepresentation.PASSWORD);
                 credential.setValue(request.getPassword());
@@ -99,25 +107,73 @@ public class KeycloakService {
                 UserResource userResource = usersResource.get(userId);
                 userResource.resetPassword(credential);
 
-                RoleRepresentation userRole = realmResource.roles().get("ROLE_USER").toRepresentation();
-                userResource.roles().realmLevel().add(Collections.singletonList(userRole));
+                log.info("✅ Password set for user: {}", request.getUsername());
 
-                log.info("✅ User created in Keycloak: {}", request.getUsername());
+                // ── 4. Assigner ROLE_USER ─────────────────────────
+                //
+                // FIX : on vérifie que ROLE_USER existe dans Keycloak
+                // avant de l'assigner. Si absent → exception claire.
+                //
+                // POURQUOI ce fix est nécessaire :
+                //   Sans vérification, realmResource.roles().get("ROLE_USER")
+                //   lance une NotFoundException si le rôle n'existe pas.
+                //   Cette exception était catchée silencieusement dans
+                //   AuthController → user créé SANS aucun rôle métier
+                //   → 403 sur tous les endpoints @PreAuthorize à la connexion
+                //
+                assignRoleToUser(realmResource, userResource, "ROLE_USER", request.getUsername());
 
             } finally {
-                // response.close() dans un finally pour éviter les fuites
                 response.close();
             }
 
         } finally {
-            // ✅ FIX : adminClient.close() dans un finally pour garantir la fermeture
             adminClient.close();
         }
     }
 
+    /**
+     * Assigne un rôle realm à un utilisateur Keycloak.
+     * Vérifie d'abord que le rôle existe, lance une exception claire sinon.
+     *
+     * @param realmResource  le realm Keycloak
+     * @param userResource   l'utilisateur cible
+     * @param roleName       le nom du rôle (ex: "ROLE_USER")
+     * @param username       pour les logs uniquement
+     */
+    private void assignRoleToUser(RealmResource realmResource,
+                                  UserResource userResource,
+                                  String roleName,
+                                  String username) {
+        try {
+            // Vérifie que le rôle existe dans Keycloak
+            RoleRepresentation role = realmResource.roles()
+                    .get(roleName)
+                    .toRepresentation();
 
+            userResource.roles().realmLevel().add(Collections.singletonList(role));
+
+            log.info("✅ Role '{}' assigned to user: {}", roleName, username);
+
+        } catch (Exception e) {
+            // ⚠️ Le rôle n'existe pas dans Keycloak → exception claire
+            // Ne pas avaler silencieusement cette erreur
+            log.error("❌ ERREUR : Le rôle '{}' n'existe pas dans le realm '{}'. "
+                            + "Créez-le dans Keycloak Admin Console : "
+                            + "Realm roles → Create role → '{}'",
+                    roleName, realm, roleName);
+
+            throw new RuntimeException(
+                    "Le rôle '" + roleName + "' est introuvable dans Keycloak. "
+                            + "Veuillez le créer dans Keycloak Admin Console avant de relancer."
+            );
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // FORGOT PASSWORD
+    // ══════════════════════════════════════════════════════════════
     public void sendPasswordResetEmail(String email) {
-        // ✅ FIX : utilise getKeycloakInstance() au lieu de redéclarer localement
         Keycloak adminClient = getKeycloakInstance();
 
         try {
@@ -132,38 +188,36 @@ public class KeycloakService {
             }
 
             String userId = users.get(0).getId();
-            UserResource userResource = usersResource.get(userId);
-            userResource.executeActionsEmail(Arrays.asList("UPDATE_PASSWORD"));
+            usersResource.get(userId).executeActionsEmail(Arrays.asList("UPDATE_PASSWORD"));
 
             log.info("✅ Password reset email sent to: {}", email);
 
         } finally {
-            // ✅ FIX : toujours fermé même si une exception est levée
             adminClient.close();
         }
     }
 
-
-
+    // ══════════════════════════════════════════════════════════════
+    // SEARCH USERS
+    // ══════════════════════════════════════════════════════════════
     public List<UserInfo> searchUsers(String query) {
         Keycloak adminClient = getKeycloakInstance();
 
         try {
-            RealmResource realmResource = adminClient.realm(realm);
-            UsersResource usersResource = realmResource.users();
-
-            return usersResource.search(query, 0, 10)
+            return adminClient.realm(realm)
+                    .users()
+                    .search(query, 0, 10)
                     .stream()
                     .map(this::mapToUserInfo)
                     .collect(Collectors.toList());
-
         } finally {
             adminClient.close();
         }
     }
 
-
-
+    // ══════════════════════════════════════════════════════════════
+    // GET USER BY ID
+    // ══════════════════════════════════════════════════════════════
     public UserInfo getUserById(String userId) {
         Keycloak adminClient = getKeycloakInstance();
 
@@ -180,7 +234,27 @@ public class KeycloakService {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // GET ALL USERS (admin only)
+    // ══════════════════════════════════════════════════════════════
+    public List<UserInfo> getAllUsers() {
+        Keycloak adminClient = getKeycloakInstance();
 
+        try {
+            return adminClient.realm(realm)
+                    .users()
+                    .list()
+                    .stream()
+                    .map(this::mapToUserInfo)
+                    .collect(Collectors.toList());
+        } finally {
+            adminClient.close();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // PRIVATE HELPERS
+    // ══════════════════════════════════════════════════════════════
     private UserInfo mapToUserInfo(UserRepresentation keycloakUser) {
         List<String> roles = new ArrayList<>();
         if (keycloakUser.getRealmRoles() != null) {
@@ -198,7 +272,6 @@ public class KeycloakService {
                 .build();
     }
 
-
     private Keycloak getKeycloakInstance() {
         return KeycloakBuilder.builder()
                 .serverUrl(authServerUrl)
@@ -208,23 +281,4 @@ public class KeycloakService {
                 .grantType("client_credentials")
                 .build();
     }
-
-
-    public List<UserInfo> getAllUsers() {
-        Keycloak adminClient = getKeycloakInstance();
-
-        try {
-            return adminClient.realm(realm)
-                    .users()
-                    .list()
-                    .stream()
-                    .map(this::mapToUserInfo)
-                    .collect(Collectors.toList());
-        } finally {
-            adminClient.close();
-        }
-    }
-
-
-
 }

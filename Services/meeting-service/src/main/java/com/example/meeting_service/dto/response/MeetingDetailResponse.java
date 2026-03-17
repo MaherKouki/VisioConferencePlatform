@@ -3,12 +3,14 @@ package com.example.meeting_service.dto.response;
 import com.example.meeting_service.enums.MeetingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class MeetingDetailResponse {
     private Long id;
     private String title;
@@ -28,6 +30,7 @@ public class MeetingDetailResponse {
 
     @Data
     @AllArgsConstructor
+    @NoArgsConstructor
     public static class OrganizerInfo {
         private String userId;
         private String username;
@@ -36,6 +39,7 @@ public class MeetingDetailResponse {
 
     @Data
     @AllArgsConstructor
+    @NoArgsConstructor
     public static class GroupInfo {
         private Long id;
         private String name;
