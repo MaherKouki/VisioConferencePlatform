@@ -22,6 +22,9 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     // Trouver réunions par groupe
     List<Meeting> findByGroupId(Long groupId);
 
+    List<Meeting> findAllByOrderByScheduledStartTimeDesc();
+
+
     // Trouver réunions entre deux dates
     List<Meeting> findByScheduledStartTimeBetween(LocalDateTime start, LocalDateTime end);
 
