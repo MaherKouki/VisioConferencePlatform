@@ -4,11 +4,13 @@ import com.example.meeting_service.enums.MeetingStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class MeetingResponse {
     private Long id;
     private String title;

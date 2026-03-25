@@ -9,6 +9,7 @@ import com.example.auth_service.dto.GroupResponse;
 import com.example.auth_service.entity.Group;
 import com.example.auth_service.entity.GroupMember;
 import com.example.auth_service.entity.GroupMemberId;
+import com.example.auth_service.webSocket.NotificationEvent;
 import org.keycloak.admin.client.Keycloak;
 
 
@@ -16,10 +17,12 @@ import lombok.RequiredArgsConstructor;
 
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +31,10 @@ public class GroupService {
 
 
     private final String realm = "visioconference";
+
+    //private final NotificationEvent notificationEvent;
+    private final SimpMessagingTemplate messagingTemplate;
+
 
 
     private final GroupRepository groupRepository;
@@ -46,6 +53,14 @@ public class GroupService {
         ownerMember.setRole("OWNER");
 
         groupMemberRepository.save(ownerMember);
+
+        messagingTemplate.convertAndSend(
+                "/topic/user/" + ownerId,   // ← notifier le créateur
+                new NotificationEvent("GROUP_CREATED",
+                        Map.of("groupId", group.getId(), "groupName", group.getName()))
+        );
+
+
 
         //group.getMembers().add(ownerMember);
         return groupMapper.toResponse(group);
@@ -109,6 +124,16 @@ public class GroupService {
         newMember.setRole(role.toUpperCase()); // ✅ toujours en majuscules
         newMember.setGroup(group);
         groupMemberRepository.save(newMember);
+
+
+        messagingTemplate.convertAndSend(
+                "/topic/user/" + userToAdd,  // ← notifier le membre ajouté
+                new NotificationEvent("ADDED_TO_GROUP",
+                        Map.of("groupId", group.getId(), "groupName", group.getName()))
+        );
+
+
+
     }
 
 
